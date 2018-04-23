@@ -1,0 +1,13 @@
+[package]
+name = "sl"
+version = "0.0.0"
+authors = ["Sam A. Horvath-Hunt <samhh.web@gmail.com>"]
+
+[[bin]]
+name = "sl"
+
+[dependencies]
+serde = "1.0"
+serde_derive = "1.0"
+serde_json = "1.0"
+
