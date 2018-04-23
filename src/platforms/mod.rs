@@ -1,10 +1,14 @@
 use std::error::Error;
-use std::collections::HashMap;
 use std::path::PathBuf;
 
 pub mod npm;
 
-pub type ScriptList = HashMap<String, String>;
+pub struct Script {
+    pub name: String,
+    pub command: String,
+}
+
+pub type ScriptList = Vec<Script>;
 
 pub trait ScriptSource {
     fn new(path: PathBuf) -> Self;

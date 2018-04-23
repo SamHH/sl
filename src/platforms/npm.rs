@@ -2,11 +2,11 @@ use std::error::Error;
 use std::fs::File;
 use std::path::PathBuf;
 use serde_json;
-use platforms::{ScriptSource, ScriptList};
+use platforms::{ScriptSource, ScriptList, Script};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Deserialize)]
 struct NpmManifest {
-    scripts: ScriptList,
+    scripts: serde_json::Map<String, serde_json::Value>,
 }
 
 pub struct Npm {
@@ -29,6 +29,11 @@ impl ScriptSource for Npm {
 
         let json: NpmManifest = serde_json::from_reader(file)?;
 
-        return Ok(json.scripts);
+        let scripts = json.scripts
+            .iter()
+            .map(|(k,v)| Script { name: k.to_string(), command: v.as_str().unwrap().to_string() })
+            .collect();
+
+        return Ok(scripts);
     }
 }
