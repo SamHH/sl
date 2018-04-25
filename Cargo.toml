@@ -10,5 +10,3 @@ name = "sl"
 serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"
-termion = "1.5"
-
