@@ -1,39 +1,42 @@
-use std::error::Error;
+use std::io;
 use std::fs::File;
 use std::path::PathBuf;
-use serde_json;
-use platforms::{ScriptSource, ScriptList, Script};
+use serde_json::{Map, Value, from_reader};
+use ::utils::{ScriptSource, Script};
 
 #[derive(Deserialize)]
 struct NpmManifest {
-    scripts: serde_json::Map<String, serde_json::Value>,
+    scripts: Map<String, Value>,
 }
 
 pub struct Npm {
     path: PathBuf,
-    file_name: String,
+    file_name: &'static str,
 }
 
 impl ScriptSource for Npm {
-    fn new(path: PathBuf) -> Self {
+    fn new(path: &PathBuf) -> Self {
         Self {
-            path,
-            file_name: String::from("package.json"),
+            path: path.clone(),
+            file_name: "package.json",
         }
     }
 
-    fn get_scripts(&self) -> Result<ScriptList, Box<Error>> {
+    fn get_scripts(&self) -> io::Result<Vec<Script>> {
         let full_path: PathBuf = [&self.path, &PathBuf::from(&self.file_name)].iter().collect();
 
         let file = File::open(&full_path.as_path())?;
 
-        let json: NpmManifest = serde_json::from_reader(file)?;
+        let manifest: NpmManifest = from_reader(file)?;
 
-        let scripts = json.scripts
+        let scripts = manifest.scripts
             .iter()
-            .map(|(k,v)| Script { name: k.to_string(), command: v.as_str().unwrap().to_string() })
+            .map(|(k, _v)| Script {
+                label: k.to_string(),
+                command: format!("npm run {}", *k),
+            })
             .collect();
 
-        return Ok(scripts);
+        Ok(scripts)
     }
 }

@@ -1,12 +1,22 @@
 [package]
 name = "sl"
-version = "0.0.0"
-authors = ["Sam A. Horvath-Hunt <samhh.web@gmail.com>"]
+version = "0.1.0"
+authors = ["Sam A. Horvath-Hunt"]
+description = "sl is a tool for the easy discovery and running of development scripts."
+documentation = "https://github.com/samhh/sl"
+homepage = "https://github.com/samhh/sl"
+repository = "https://github.com/samhh/sl"
+readme = "README.md"
+keywords = ["script", "environment"]
+categories = ["command-line-utilities"]
+license = "AGPL-3.0-only"
 
 [[bin]]
 name = "sl"
+path = "src/main.rs"
 
 [dependencies]
 serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"
+termion = "1.5"

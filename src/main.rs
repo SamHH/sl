@@ -1,107 +1,159 @@
+#![feature(range_contains)]
+
 extern crate serde_json;
 #[macro_use] extern crate serde_derive;
-
-use std::env;
-use std::path::PathBuf;
-use std::io::{stdin, BufRead};
-use std::process::Command;
-use std::os::unix::process::CommandExt;
+extern crate termion;
 
 mod platforms;
-use platforms::{ScriptSource, ScriptList, Script};
-use platforms::npm::Npm;
+mod print;
+mod utils;
 
-struct ScriptGroup {
-    name: String,
-    scripts: ScriptList,
-}
+use std::rc::Rc;
+use std::path::PathBuf;
+use std::io::{stdin, BufRead, Lines, StdinLock};
+use std::process::Command;
+use std::os::unix::process::CommandExt;
+use print::{info, warn, print_platforms, print_scripts};
+use platforms::populate_platforms;
+use utils::Platform;
 
-#[derive(PartialEq)]
+type Index = i16;
+
 enum Step {
-    ChoosingGroup,
+    ChoosingPlatform,
     ChoosingScript,
+    RunningScript,
 }
 
-fn clear() {
-    // println!("{}", clear::All);
-}
+fn get_workdir() -> std::io::Result<PathBuf> {
+    use std::env;
 
-fn print_groups(groups: &Vec<ScriptGroup>) {
-    for (index, group) in groups.iter().enumerate() {
-        println!("[{}]: {}", index, group.name);
-    }
-}
-
-fn print_scripts(scripts: &ScriptList) {
-    for (index, script) in scripts.iter().enumerate() {
-        println!("[{}]: {} ({})", index, script.name, script.command);
-    }
-}
-
-fn run_script(script: &Script) -> std::io::Error {
-    println!("Running script `{}`: `{}`", script.name, script.command);
-
-    // At this point, if successful, the script will be run and sl will be
-    // safely terminated. An error is returned and sl continues running if the
-    // exec fails for any reason
-    return Command::new("sh").arg("-c").arg(&script.command).exec();
-}
-
-fn main() {
     // First index (0) is relative path of executable, ignore it. See:
     // https://doc.rust-lang.org/std/env/fn.args.html
     let arg: Option<String> = env::args().nth(1);
-    let path: PathBuf = match arg {
-        Some(p) => PathBuf::from(p),
-        None => env::current_dir().unwrap(),
+    let path = match arg {
+        Some(p) => Ok(PathBuf::from(p)),
+        None => env::current_dir(),
     };
 
-    let mut groups: Vec<ScriptGroup> = Vec::new();
+    path
+}
 
-    let npm_scripts = Npm::new(path).get_scripts();
-    if npm_scripts.is_ok() {
-        groups.push(ScriptGroup { name: String::from("npm"), scripts: npm_scripts.unwrap() });
+fn listen_for_index(evt: &mut Lines<StdinLock>) -> Result<Index, std::num::ParseIntError> {
+    evt.next().unwrap().unwrap().parse()
+}
+
+fn run_script(workdir: &PathBuf, command: &String) -> std::io::Error {
+    info(format!("exec: {}", &command));
+
+    // At this point, if successful, the script will be run in the workdir and
+    // sl will be safely terminated. An error is returned and sl continues
+    // running if the exec fails for any reason
+    return Command::new("sh").arg("-c").current_dir(&workdir).arg(&command).exec();
+}
+
+struct State {
+    step: Step,
+    platforms: Vec<Platform>,
+    platform_index: Option<Index>,
+    script_index: Option<Index>,
+}
+
+fn main() {
+    let workdir = Rc::new(get_workdir().unwrap());
+    let platforms = populate_platforms(&workdir);
+
+    if platforms.is_empty() {
+        warn("No compatible environments found.");
+
+        return;
     }
+
+    // Not reactive, but we'll treat it as if it is in the loop
+    let mut state = State {
+        step: Step::ChoosingPlatform,
+        platforms,
+        platform_index: None,
+        script_index: None,
+    };
 
     let stdin = stdin();
     let mut evt = stdin.lock().lines();
-    let mut step: Step = Step::ChoosingGroup;
-    let mut group_index: usize = 0;
 
     loop {
-        clear();
+        match state.step {
+            Step::ChoosingPlatform => {
+                let platforms = &state.platforms;
 
-        match step {
-            Step::ChoosingGroup => { print_groups(&groups); },
-            Step::ChoosingScript => { print_scripts(&groups[group_index].scripts); },
-        };
+                print_platforms(platforms);
 
-        let input: Result<i16, _> = evt.next().unwrap().unwrap().parse();
+                let valid_indices = 0..platforms.len() as i16;
+                let input = match listen_for_index(&mut evt) {
+                    Ok(input) => {
+                        if !valid_indices.contains(&input) { continue; }
 
-        // If we were unable to parse an integer from the user input, then retry
-        if input.is_err() { continue; }
+                        input
+                    },
+                    Err(_) => {
+                        continue;
+                    },
+                };
 
-        let index = input.unwrap();
-
-        match step {
-            Step::ChoosingGroup => {
-                if index < 0 || index >= groups.len() as i16 { continue; }
-                else {
-                    group_index = index as usize;
-                    step = Step::ChoosingScript;
-                    continue;
-                }
+                state.platform_index = Some(input);
+                state.step = Step::ChoosingScript;
             },
             Step::ChoosingScript => {
-                if index < 0 || index >= groups[group_index].scripts.len() as i16 { continue; }
-                else {
-                    let selected_script = &groups[group_index].scripts[index as usize];
+                let platform_index = match state.platform_index {
+                    Some(index) => index as usize,
+                    None => {
+                        state.step = Step::ChoosingPlatform;
 
-                    run_script(selected_script);
+                        continue;
+                    },
+                };
 
-                    break;
-                }
+                let scripts = &state.platforms[platform_index].scripts;
+
+                print_scripts(scripts);
+
+                let valid_indices = 0..scripts.len() as i16;
+                let input = match listen_for_index(&mut evt) {
+                    Ok(input) => {
+                        if !valid_indices.contains(&input) { continue; }
+
+                        input
+                    },
+                    Err(_) => {
+                        continue;
+                    },
+                };
+
+                state.script_index = Some(input);
+                state.step = Step::RunningScript;
             },
-        };
+            Step::RunningScript => {
+                let platform_index = match state.platform_index {
+                    Some(index) => index as usize,
+                    None => {
+                        state.step = Step::ChoosingPlatform;
+
+                        continue;
+                    },
+                };
+
+                let script_index = match state.script_index {
+                    Some(index) => index as usize,
+                    None => {
+                        state.step = Step::ChoosingScript;
+
+                        continue;
+                    },
+                };
+
+                run_script(&workdir, &state.platforms[platform_index].scripts[script_index].command);
+
+                break;
+            },
+        }
     }
 }

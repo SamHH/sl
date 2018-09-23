@@ -1,16 +1,21 @@
-use std::error::Error;
+mod cargo;
+mod npm;
+
 use std::path::PathBuf;
+use self::cargo::Cargo;
+use self::npm::Npm;
+use ::utils::{ScriptSource, Platform};
 
-pub mod npm;
+pub fn populate_platforms(workdir: &PathBuf) -> Vec<Platform> {
+    let mut platforms = Vec::new();
 
-pub struct Script {
-    pub name: String,
-    pub command: String,
-}
+    if let Ok(scripts) = Cargo::new(&workdir).get_scripts() {
+        platforms.push(Platform { name: "Cargo", scripts })
+    }
 
-pub type ScriptList = Vec<Script>;
+    if let Ok(scripts) = Npm::new(&workdir).get_scripts() {
+        platforms.push(Platform { name: "npm", scripts });
+    }
 
-pub trait ScriptSource {
-    fn new(path: PathBuf) -> Self;
-    fn get_scripts(&self) -> Result<ScriptList, Box<Error>>;
+    platforms
 }
