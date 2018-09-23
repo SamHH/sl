@@ -2,7 +2,7 @@
 
 extern crate serde_json;
 #[macro_use] extern crate serde_derive;
-extern crate termion;
+extern crate yansi;
 
 mod platforms;
 mod print;
