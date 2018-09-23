@@ -29,13 +29,17 @@ impl ScriptSource for Npm {
 
         let manifest: NpmManifest = from_reader(file)?;
 
-        let scripts = manifest.scripts
+        let scripts: Vec<Script> = manifest.scripts
             .iter()
             .map(|(k, _v)| Script {
                 label: k.to_string(),
                 command: format!("npm run {}", *k),
             })
             .collect();
+
+        if scripts.is_empty() {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "No scripts found."));
+        }
 
         Ok(scripts)
     }
