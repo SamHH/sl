@@ -11,9 +11,9 @@ mod utils;
 use std::rc::Rc;
 use std::path::PathBuf;
 use std::io::{stdin, BufRead, Lines, StdinLock};
-use std::process::Command;
+use std::process::{exit, Command};
 use std::os::unix::process::CommandExt;
-use print::{info, warn, print_platforms, print_scripts};
+use print::{info, warn, error, print_platforms, print_scripts};
 use platforms::populate_platforms;
 use utils::Platform;
 
@@ -43,12 +43,10 @@ fn listen_for_index(evt: &mut Lines<StdinLock>) -> Result<Index, std::num::Parse
     evt.next().unwrap().unwrap().parse()
 }
 
+// Run the script and exit, or if insuccessful then return an error
 fn run_script(workdir: &PathBuf, command: &String) -> std::io::Error {
     info(format!("exec: {}", &command));
 
-    // At this point, if successful, the script will be run in the workdir and
-    // the app will be safely terminated. An error is returned and the app
-    // continues running if the exec fails for any reason
     return Command::new("sh").arg("-c").current_dir(&workdir).arg(&command).exec();
 }
 
@@ -150,9 +148,12 @@ fn main() {
                     },
                 };
 
-                run_script(&workdir, &state.platforms[platform_index].scripts[script_index].command);
+                // run_script will not return if successful, so this is solely
+                // for failure case
+                let run_err = run_script(&workdir, &state.platforms[platform_index].scripts[script_index].command);
 
-                break;
+                error(format!("Failed to run script. Error: {}", run_err));
+                exit(0);
             },
         }
     }
