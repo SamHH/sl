@@ -1,6 +1,6 @@
 [package]
 name = "sr"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Sam A. Horvath-Hunt"]
 description = "sr is a tool for the easy discovery and running of development scripts."
 documentation = "https://github.com/samhh/sr"
