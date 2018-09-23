@@ -68,7 +68,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "sl"
+name = "sr"
 version = "0.1.0"
 dependencies = [
  "serde 1.0.79 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -3,7 +3,7 @@ use termion::color;
 use ::utils::{Platform, Script};
 
 fn print_with_prefix<T: Into<String>>(text: T) {
-    let prefix = format!("{}sl>{}", color::Fg(color::Blue), color::Fg(color::Reset));
+    let prefix = format!("{}sr>{}", color::Fg(color::Blue), color::Fg(color::Reset));
 
     println!("{} {}", prefix, text.into());
 }

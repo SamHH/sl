@@ -1,18 +1,18 @@
 [package]
-name = "sl"
+name = "sr"
 version = "0.1.0"
 authors = ["Sam A. Horvath-Hunt"]
-description = "sl is a tool for the easy discovery and running of development scripts."
-documentation = "https://github.com/samhh/sl"
-homepage = "https://github.com/samhh/sl"
-repository = "https://github.com/samhh/sl"
+description = "sr is a tool for the easy discovery and running of development scripts."
+documentation = "https://github.com/samhh/sr"
+homepage = "https://github.com/samhh/sr"
+repository = "https://github.com/samhh/sr"
 readme = "README.md"
 keywords = ["script", "environment"]
 categories = ["command-line-utilities"]
 license = "AGPL-3.0-only"
 
 [[bin]]
-name = "sl"
+name = "sr"
 path = "src/main.rs"
 
 [dependencies]

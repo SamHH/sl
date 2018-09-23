@@ -47,8 +47,8 @@ fn run_script(workdir: &PathBuf, command: &String) -> std::io::Error {
     info(format!("exec: {}", &command));
 
     // At this point, if successful, the script will be run in the workdir and
-    // sl will be safely terminated. An error is returned and sl continues
-    // running if the exec fails for any reason
+    // the app will be safely terminated. An error is returned and the app
+    // continues running if the exec fails for any reason
     return Command::new("sh").arg("-c").current_dir(&workdir).arg(&command).exec();
 }
 
