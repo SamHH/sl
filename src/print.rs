@@ -18,6 +18,12 @@ pub fn warn<T: Into<String>>(text: T) {
     print_with_prefix(with_color);
 }
 
+pub fn error<T: Into<String>>(text: T) {
+    let with_color = format!("{}{}", color::Fg(color::Red), text.into());
+
+    print_with_prefix(with_color);
+}
+
 fn print_item(key: impl Display, item: &String) {
     info(format!("[{}]: {}", key, &item));
 }
